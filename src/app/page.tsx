@@ -1,103 +1,131 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import styles from './BingoLottery.module.css';
+
+export default function BingoLottery() {
+  const [drawnNumbers, setDrawnNumbers] = useState<number[]>([]);
+  const [currentNumber, setCurrentNumber] = useState<number | null>(null);
+  const [isDrawing, setIsDrawing] = useState<boolean>(false);
+  const [sortOrder, setSortOrder] = useState<'latest' | 'ascending'>('latest');
+
+  // 初期化時に空の配列で開始
+  useEffect(() => {
+    // メモリ内でのみ状態を管理
+    setDrawnNumbers([]);
+  }, []);
+
+  const drawNumber = () => {
+    if (drawnNumbers.length >= 75) {
+      alert('全ての数字が出ました！');
+      return;
+    }
+
+    setIsDrawing(true);
+    
+    // アニメーション効果のための遅延
+    setTimeout(() => {
+      const availableNumbers = Array.from({ length: 75 }, (_, i) => i + 1)
+        .filter(num => !drawnNumbers.includes(num));
+      
+      const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+      const newNumber = availableNumbers[randomIndex];
+      
+      setCurrentNumber(newNumber);
+      setDrawnNumbers(prev => [...prev, newNumber]);
+      setIsDrawing(false);
+    }, 1000);
+  };
+
+  const resetGame = () => {
+    if (confirm('履歴をリセットしますか？')) {
+      setDrawnNumbers([]);
+      setCurrentNumber(null);
+    }
+  };
+
+  const getSortedNumbers = () => {
+    return sortOrder === 'latest' 
+      ? [...drawnNumbers].reverse() 
+      : [...drawnNumbers].sort((a, b) => a - b);
+  };
+
+  const getNumberColumn = (num: number): string => {
+    if (num <= 15) return 'B';
+    if (num <= 30) return 'I';
+    if (num <= 45) return 'N';
+    if (num <= 60) return 'G';
+    return 'O';
+  };
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className={styles.container}>
+      <header className={styles.header}>
+        <h1>ビンゴ抽選</h1>
+        <Link href="/card" className={styles.cardLink}>
+          ビンゴカードへ
+        </Link>
+      </header>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      <main className={styles.main}>
+        <div className={styles.currentNumberSection}>
+          <div className={styles.currentNumber}>
+            {isDrawing ? (
+              <div className={styles.drawing}>
+                <div className={styles.spinner}></div>
+                <p>抽選中...</p>
+              </div>
+            ) : (
+              currentNumber && (
+                <>
+                  <span className={styles.column}>{getNumberColumn(currentNumber)}</span>
+                  <span className={styles.number}>{currentNumber}</span>
+                </>
+              )
+            )}
+          </div>
+          
+          <button 
+            onClick={drawNumber} 
+            disabled={isDrawing || drawnNumbers.length >= 75}
+            className={styles.drawButton}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {drawnNumbers.length >= 75 ? '完了' : '次の数字を出す'}
+          </button>
+        </div>
+
+        <div className={styles.historySection}>
+          <div className={styles.historyHeader}>
+            <h2>出た数字の履歴 ({drawnNumbers.length}/75)</h2>
+            <div className={styles.controls}>
+              <select 
+                value={sortOrder} 
+                onChange={(e) => setSortOrder(e.target.value as 'latest' | 'ascending')}
+                className={styles.sortSelect}
+              >
+                <option value="latest">最新順</option>
+                <option value="ascending">昇順</option>
+              </select>
+              <button onClick={resetGame} className={styles.resetButton}>
+                リセット
+              </button>
+            </div>
+          </div>
+
+          <div className={styles.numberGrid}>
+            {getSortedNumbers().map((num) => (
+              <div 
+                key={num} 
+                className={`${styles.historyNumber} ${styles[`column${getNumberColumn(num)}`]}`}
+              >
+                <span className={styles.historyColumn}>{getNumberColumn(num)}</span>
+                <span className={styles.historyNumberValue}>{num}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
