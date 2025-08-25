@@ -21,6 +21,7 @@ export default function BingoLottery() {
       alert('全ての数字が出ました！');
       return;
     }
+    
 
     setIsDrawing(true);
     
